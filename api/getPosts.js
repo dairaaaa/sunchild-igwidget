@@ -1,3 +1,5 @@
+console.log('ENV CHECK:', !!process.env.NOTION_TOKEN, !!process.env.NOTION_DATABASE_CONTENUS_ID);
+
 // api/getPosts.js
 module.exports = async function handler(req, res) {
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
