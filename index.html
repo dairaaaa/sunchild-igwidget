@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feed Instagram</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #fff; color: #000; min-height: 100vh; }
+    .page { max-width: 1040px; margin: 0 auto; padding: 20px 24px 80px; }
+
+    /* Profile */
+    .username     { font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: -.02em; }
+    .display-name { font-size: 15px; font-weight: 600; margin-bottom: 0; }
+    .sep { height: 1px; background: #efefef; margin: 16px 0; }
+
+    /* Action bar */
+    .action-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 0; }
+
+    .btn-refresh {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: #f0f0f0; color: #1a1a1a; border: none; border-radius: 8px;
+      padding: 10px 18px; font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s;
+    }
+    .btn-refresh:hover { background: #e2e2e2; }
+    .btn-refresh svg { width: 14px; height: 14px; }
+
+    .btn-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px; border: none; border-radius: 8px;
+      background: #f0f0f0; cursor: pointer; color: #444; transition: background .15s;
+    }
+    .btn-icon:hover { background: #e2e2e2; }
+    .btn-icon svg { width: 16px; height: 16px; }
+
+    /* État dropdown */
+    .select-wrap { position: relative; display: inline-block; }
+    .filter-select {
+      appearance: none; -webkit-appearance: none;
+      background: #f0f0f0; border: none; border-radius: 8px;
+      padding: 9px 30px 9px 14px; font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500; color: #1a1a1a;
+      cursor: pointer; outline: none; transition: background .15s; height: 38px;
+    }
+    .filter-select:hover { background: #e2e2e2; }
+    .select-wrap::after {
+      content: ''; position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      border-left: 4px solid transparent; border-right: 4px solid transparent;
+      border-top: 5px solid #666; pointer-events: none;
+    }
+
+    /* Settings dropdown */
+    .settings-wrap { position: relative; }
+    .settings-dropdown {
+      display: none; position: absolute; top: calc(100% + 8px); left: 0;
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.14); padding: 10px 0; min-width: 280px; z-index: 200;
+    }
+    .settings-dropdown.open { display: block; }
+    .dd-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; font-size: 14px; font-weight: 500; color: #1a1a1a; }
+    .dd-divider { height: 1px; background: #f0f0f0; margin: 6px 0; }
+    .dd-note { padding: 10px 18px 4px; font-size: 12px; color: #888; line-height: 1.5; }
+
+    .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { position: absolute; inset: 0; border-radius: 24px; background: #ccc; cursor: pointer; transition: background .2s; }
+    .toggle input:checked + .toggle-track { background: #e8472a; }
+    .toggle-track::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    .toggle input:checked + .toggle-track::after { transform: translateX(18px); }
+
+    .radio-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .radio-row input[type="radio"] { display: none; }
+    .radio-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .radio-row input:checked ~ .radio-circle { border-color: #e8472a; }
+    .radio-circle::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: transparent; }
+    .radio-row input:checked ~ .radio-circle::after { background: #e8472a; }
+    .radio-row.locked { opacity: .45; cursor: not-allowed; }
+
+    /* Grid */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+
+    /* Post card — format 4:5 */
+    .post-card { position: relative; aspect-ratio: 4/5; overflow: hidden; cursor: pointer; background: #efefef; }
+    .post-card img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .3s; }
+    .post-card:hover img { transform: scale(1.03); }
+
+    /* Date badge on hover */
+    .post-date-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: rgba(0,0,0,0.6); color: #fff;
+      font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 6px;
+      opacity: 0; transition: opacity .2s; pointer-events: none;
+    }
+    .post-card:hover .post-date-badge { opacity: 1; }
+
+    /* Pin icon */
+    .post-pin {
+      position: absolute; top: 8px; right: 8px;
+      width: 22px; height: 22px;
+      pointer-events: none;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+    }
+
+    .post-video {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      color: rgba(255,255,255,.9); font-size: 32px; pointer-events: none;
+    }
+
+    /* Placeholder */
+    .placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px; text-align: center; }
+    .placeholder-emoji { font-size: 24px; opacity: .3; }
+    .placeholder-text { font-size: 11px; font-weight: 500; color: #666; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+    .status-badge { position: absolute; bottom: 7px; left: 7px; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+    .s-Idée            { background:#f0e6ff; color:#5a2d82; }
+    .s-Pré-production  { background:#fff3cd; color:#856404; }
+    .s-Production      { background:#cfe2ff; color:#084298; }
+    .s-Prêt-à-publier  { background:#d4edda; color:#155724; }
+    .s-Publié          { background:#e2e3e5; color:#383d41; }
+    .bg-Idée           { background:#faf0ff; }
+    .bg-Pré-production { background:#fffdf0; }
+    .bg-Production     { background:#f0f4ff; }
+    .bg-Prêt-à-publier { background:#f2f9f2; }
+    .bg-Publié         { background:#f5f5f5; }
+
+    /* States */
+    .state-box { grid-column: 1/-1; padding: 80px 0; text-align: center; color: #aaa; }
+    .spinner { width: 26px; height: 26px; border: 2px solid #eee; border-top-color: #555; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .state-box p { font-size: 13px; }
+    .state-box h3 { font-size: 15px; font-weight: 600; color: #444; margin-bottom: 6px; }
+
+    /* Modal — image only */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .modal-bg.open { opacity: 1; pointer-events: auto; }
+    .modal-img-wrap { position: relative; max-width: 520px; width: 100%; transform: scale(.97); transition: transform .2s; }
+    .modal-bg.open .modal-img-wrap { transform: scale(1); }
+    .modal-img-wrap img { width: 100%; max-height: 90vh; object-fit: contain; display: block; border-radius: 4px; }
+    .modal-close { position: absolute; top: -14px; right: -14px; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: none; cursor: pointer; font-size: 16px; color: #333; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+    .modal-close:hover { background: #f0f0f0; }
+    .modal-empty { width: 400px; height: 500px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 64px; opacity: .15; color: #fff; position: relative; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Profile -->
+  <div class="username">@sunchild.ch</div>
+  <div class="display-name">SUNCHILD | Atelier bijoux Genèvee</div>
+
+  <div class="sep"></div>
+
+  <!-- Action bar : Refresh | ... | État -->
+  <div class="action-bar">
+    <button class="btn-refresh" onclick="loadPosts()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Refresh
+    </button>
+
+    <!-- "..." settings -->
+    <div class="settings-wrap">
+      <button class="btn-icon" onclick="toggleSettings()">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>
+        </svg>
+      </button>
+      <div class="settings-dropdown" id="settingsDropdown">
+        <div class="dd-row">
+          <span>Show Bio</span>
+          <label class="toggle"><input type="checkbox" id="toggleBio" onchange="applyToggles()"><div class="toggle-track"></div></label>
+        </div>
+        <div class="dd-row">
+          <span>Show Highlights</span>
+          <label class="toggle"><input type="checkbox" id="toggleHighlights" onchange="applyToggles()"><div class="toggle-track"></div></label>
+        </div>
+        <div class="dd-row">
+          <span>Show Content Map</span>
+          <label class="toggle"><input type="checkbox" id="toggleContentMap"><div class="toggle-track"></div></label>
+        </div>
+        <div class="dd-divider"></div>
+        <label class="radio-row">
+          <span>Sort by publish date</span>
+          <input type="radio" name="sort" id="sortDate" checked>
+          <div class="radio-circle"></div>
+        </label>
+        <label class="radio-row locked">
+          <span>Custom order 🔒</span>
+          <input type="radio" name="sort" disabled>
+          <div class="radio-circle"></div>
+        </label>
+        <div class="dd-divider"></div>
+        <div class="dd-note">Want to customize your bio or enable drag mode? Go to your widget setup page → Account → Find your widget</div>
+      </div>
+    </div>
+
+    <!-- Dropdown État -->
+    <div class="select-wrap">
+      <select class="filter-select" id="statusFilter" onchange="renderGrid()">
+        <option value="">État</option>
+        <option value="Idée">Idée</option>
+        <option value="Pré-production">Pré-production</option>
+        <option value="Production">Production</option>
+        <option value="Prêt à publier">Prêt à publier</option>
+        <option value="Publié">Publié</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Grid -->
+  <div class="grid" id="grid">
+    <div class="state-box"><div class="spinner"></div><p>Chargement du feed…</p></div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg" onclick="backdropClick(event)">
+  <div class="modal-img-wrap" id="modalWrap">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+</div>
+
+<!-- SVG pin icon (inline, réutilisable) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-pin" viewBox="0 0 32 32">
+    <path d="m28.1 12.7-8.8-8.8c-.4-.4-1-.4-1.4 0l-3.2 3.2c-.5.5-.3 1.1 0 1.4l.7.7-3 3c-1.5-.3-5.6-1-7.8 1.2-.4.4-.4 1 0 1.4l5.7 5.7L4 26.8c-.4.4-.4 1 0 1.4s1.1.3 1.4 0l6.3-6.3 5.7 5.7c.6.5 1.2.3 1.4 0 2.2-2.2 1.5-6.3 1.2-7.8l3-3 .7.7c.4.4 1 .4 1.4 0l3.2-3.2c.2-.6.2-1.2-.2-1.6z" fill="white"/>
+  </symbol>
+</svg>
+
+<script>
+  let allPosts = [];
+  let shown    = [];
+
+  // IDs des 3 posts épinglés — à remplir avec les vrais IDs Notion
+  // Tu les trouves dans l'URL de chaque page Notion
+  const PINNED_IDS = [
+    '321671de-72f4-8075-9377-efed2197c45b', // L'atelier boutique
+    '321671de-72f4-80f7-80cb-d9fdad4dc3be', // L'univers
+    '321671de-72f4-80fc-8030-d287b3f57ece', // L'expérience
+    // ex: 'abc123-def456-...',
+  ];
+
+  function toggleSettings() {
+    document.getElementById('settingsDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', e => {
+    if (!document.querySelector('.settings-wrap').contains(e.target))
+      document.getElementById('settingsDropdown').classList.remove('open');
+  });
+
+  function applyToggles() {
+    // (bio/highlights retirés du profil simplifié — toggles gardés pour compatibilité)
+  }
+
+  async function loadPosts() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '<div class="state-box"><div class="spinner"></div><p>Chargement du feed…</p></div>';
+    try {
+      const r = await fetch('/api/getPosts');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      allPosts = await r.json();
+      renderGrid();
+    } catch (e) {
+      grid.innerHTML = `<div class="state-box"><h3>⚠️ Erreur de connexion</h3><p>Vérifie tes variables Notion dans Vercel.<br><small>${e.message}</small></p></div>`;
+    }
+  }
+
+  function renderGrid() {
+    const sv = document.getElementById('statusFilter').value;
+    let posts = sv ? allPosts.filter(p => p.status === sv) : [...allPosts];
+
+    // Séparer épinglés et normaux
+    const pinned  = posts.filter(p => PINNED_IDS.includes(p.id));
+    const regular = posts.filter(p => !PINNED_IDS.includes(p.id));
+
+    // Trier les normaux du plus récent au plus ancien
+    regular.sort((a, b) => !a.date ? 1 : !b.date ? -1 : new Date(b.date) - new Date(a.date));
+
+    // Épinglés d'abord, puis le reste
+    shown = [...pinned, ...regular];
+
+    const grid = document.getElementById('grid');
+    if (!shown.length) {
+      grid.innerHTML = '<div class="state-box"><h3>Aucun post</h3><p>Aucun contenu pour ce filtre.</p></div>';
+      return;
+    }
+    grid.innerHTML = shown.map((p, i) => card(p, i)).join('');
+  }
+
+  function card(p, i) {
+    const sk = slugStatus(p.status);
+    const isPinned = PINNED_IDS.includes(p.id);
+    const dateLabel = p.date ? formatShortDate(p.date) : '';
+    const dateBadge = dateLabel ? `<div class="post-date-badge">${dateLabel}</div>` : '';
+    const pinIcon = isPinned
+      ? `<svg class="post-pin" viewBox="0 0 32 32"><use href="#icon-pin"/></svg>`
+      : '';
+
+    if (p.imageUrl) {
+      return `<div class="post-card" onclick="openModal(${i})">
+        <img src="${x(p.imageUrl)}" loading="lazy" alt="">
+        ${dateBadge}
+        ${pinIcon}
+        ${p.isVideo ? '<div class="post-video">▶</div>' : ''}
+      </div>`;
+    }
+    return `<div class="post-card bg-${sk}" onclick="openModal(${i})">
+      <div class="placeholder">
+        <div class="placeholder-emoji">${emoji(p.status)}</div>
+        <div class="placeholder-text">${x(p.title || '')}</div>
+      </div>
+      ${dateBadge}
+      ${pinIcon}
+      <div class="status-badge s-${sk}">${x(p.status || '')}</div>
+    </div>`;
+  }
+
+  function openModal(i) {
+    const p = shown[i]; if (!p) return;
+    const wrap = document.getElementById('modalWrap');
+    if (p.imageUrl) {
+      wrap.innerHTML = `<button class="modal-close" onclick="closeModal()">✕</button><img src="${x(p.imageUrl)}" alt="">`;
+    } else {
+      wrap.innerHTML = `<div class="modal-empty"><button class="modal-close" onclick="closeModal()">✕</button>${emoji(p.status)}</div>`;
+    }
+    document.getElementById('modalBg').classList.add('open');
+  }
+
+  function backdropClick(e) { if (e.target === document.getElementById('modalBg')) closeModal(); }
+  function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  function x(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function slugStatus(s) { return (s||'').replace(/\s/g,'-').replace(/[^\w-]/g,''); }
+  function emoji(s) { return {'Idée':'💡','Pré-production':'✍️','Production':'🎬','Prêt à publier':'📅','Publié':'✅'}[s]||'💡'; }
+  function formatShortDate(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  }
+
+  loadPosts();
+</script>
+</body>
+</html>
