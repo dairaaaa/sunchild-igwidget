@@ -1,5 +1,5 @@
 // api/getPosts.js
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const NOTION_DB_ID = process.env.NOTION_DATABASE_CONTENUS_ID;
 
@@ -32,7 +32,6 @@ export default async function handler(req, res) {
 
     const posts = data.results.map((page) => {
       const p = page.properties;
-
       const title    = p['Nom']?.title?.[0]?.plain_text || p['Name']?.title?.[0]?.plain_text || p['Titre']?.title?.[0]?.plain_text || '';
       const status   = p['État']?.status?.name || p['État']?.select?.name || '';
       const date     = p['Date de publication']?.date?.start || null;
@@ -54,4 +53,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-}
+};
