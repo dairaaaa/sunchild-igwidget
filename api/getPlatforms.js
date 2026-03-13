@@ -1,5 +1,5 @@
 // api/getPlatforms.js
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const NOTION_TOKEN    = process.env.NOTION_TOKEN;
   const PLATFORMS_DB_ID = process.env.NOTION_DATABASE_PLATEFORMES_ID;
 
@@ -35,4 +35,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-}
+};
