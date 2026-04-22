@@ -277,6 +277,9 @@
     const sv = document.getElementById('statusFilter').value;
     let posts = sv ? allPosts.filter(p => p.status === sv) : [...allPosts];
 
+     // Masquer les posts avec le statut "Idée"
+    posts = posts.filter(p => p.status !== 'Idée');
+ 
     // Séparer épinglés et normaux
     const pinned  = posts.filter(p => PINNED_IDS.includes(p.id));
     const regular = posts.filter(p => !PINNED_IDS.includes(p.id));
@@ -308,8 +311,7 @@
       return `<div class="post-card" onclick="openModal(${i})">
         <img src="${x(p.imageUrl)}" loading="lazy" alt="">
         ${dateBadge}
-        ${pinIcon}
-        ${p.isVideo ? '<div class="post-video">▶</div>' : ''}
+        ${pinIcon}''}
       </div>`;
     }
     return `<div class="post-card bg-${sk}" onclick="openModal(${i})">
